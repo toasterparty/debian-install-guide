@@ -10,7 +10,7 @@ FILENAMES=("update.sh" "cron.sh")
 mkdir -p $SH && cd $SH
 for FILENAME in "${FILENAMES[@]}"; do
     FILEPATH=$SH/$FILENAME
-    wget -nv -N $HOST/$FILENAME
+    wget -nv -N $HOST/sh/$FILENAME
     chmod +x $FILEPATH
 done
 
@@ -63,8 +63,9 @@ while true; do
             # Add firmware to apt sources
             SOURCES_LIST="/etc/apt/sources.list"
             TAGS=("contrib" "non-free" "non-free-firmware")
+
             for TAG in "${TAGS[@]}"; do
-                sudo sed -i "/main/ { / $TAG$/! s/$/ $TAG/ }" $SOURCES_LIST
+                sudo sed -i "/main/ { / $TAG\$/! s/$/ $TAG/ }" $SOURCES_LIST
             done
 
             $SH/update.sh
