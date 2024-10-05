@@ -65,7 +65,7 @@ while true; do
             TAGS=("contrib" "non-free" "non-free-firmware")
 
             for TAG in "${TAGS[@]}"; do
-                sudo sed -i "/main/ { / $TAG\$/! s/$/ $TAG/ }" $SOURCES_LIST
+                sudo sed -i "/main/ { / ${TAG}(\s|$)/! s/$/ $TAG/ }" $SOURCES_LIST
             done
 
             $SH/update.sh
