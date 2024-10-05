@@ -18,5 +18,6 @@ You will be prompted to log back in afterwards.
 
 ```sh
 sudo apt install -y wget
-wget 
+wget https://toasterparty.github.io/debian-setup-guide/configure.sh
+chmod +x configure.sh
 ```
