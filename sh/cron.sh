@@ -19,7 +19,7 @@ if ! crontab -l &>/dev/null; then
     echo "# Empty crontab created on $(date)" > /tmp/crontab$$
     crontab /tmp/crontab$$
     rm -f /tmp/crontab$$
-    echo "Crontab created."
+    echo "Crontab created"
 fi
 
 # Ensure log directory exists
@@ -32,15 +32,13 @@ ESCAPED_FREQUENCY=$(echo "$FREQUENCY" | sed 's/[&/\]/\\&/g')
 # Prepare cron job line with log redirection
 CRON_JOB="$FREQUENCY $COMMAND >> $LOG_FILE 2>&1"
 
-# Check for existing cron job
-EXISTING_JOB=$(crontab -l | grep "# $JOB_NAME$")
-
-if [ -z "$EXISTING_JOB" ]; then
-    # No existing job, add new
-    (crontab -l 2>/dev/null; echo "$CRON_JOB # $JOB_NAME") | crontab -
-    echo "Cron job '$JOB_NAME' added successfully."
+# Check if there's an existing job with the same name
+if crontab -l 2>/dev/null | grep -q "# $JOB_NAME$"; then
+    # Job exists, update it
+    (crontab -l 2>/dev/null | grep -v "# $JOB_NAME$"; echo "$FREQUENCY $COMMAND >> $LOG_FILE 2>&1 # $JOB_NAME") | crontab -
+    echo "Updated cron job: $JOB_NAME"
 else
-    # Existing job found, replace it
-    (crontab -l | grep -v "# $JOB_NAME$" | sed "/$ESCAPED_COMMAND/d"; echo "$CRON_JOB # $JOB_NAME") | crontab -
-    echo "Cron job '$JOB_NAME' updated successfully."
+    # No job found, adding it
+    (crontab -l 2>/dev/null; echo "$FREQUENCY $COMMAND >> $LOG_FILE 2>&1 # $JOB_NAME") | crontab -
+    echo "Added new cron job: $JOB_NAME"
 fi
