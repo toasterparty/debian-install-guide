@@ -13,9 +13,10 @@ echo "Passwordless Sudo: OK"
 # Download util script
 
 FILENAMES=("update.sh" "cron.sh")
+mkdir -p $HOME/sh && cd $HOME/sh
 for FILENAME in "${FILENAMES[@]}"; do
     FILEPATH=$HOME/sh/$FILENAME
-    wget -nv -N -O $FILEPATH $HOST/sh/$FILENAME
+    wget -nv -N $HOST/sh/$FILENAME
     chmod +x $FILEPATH
     echo "~/sh/$FILENAME OK"
 done

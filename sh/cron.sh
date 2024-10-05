@@ -2,6 +2,7 @@
 set -e
 
 # Validate number of arguments
+
 if [ "$#" -ne 3 ]; then
     echo "Usage: $0 <job-name> <command> <frequency>"
     exit 1
@@ -12,6 +13,14 @@ COMMAND=$2
 FREQUENCY=$3
 LOG_DIR="$HOME/logs"
 LOG_FILE="$LOG_DIR/$JOB_NAME.log"
+
+# Ensure crontab for current user
+if ! crontab -l &>/dev/null; then
+    echo "# Empty crontab created on $(date)" > /tmp/crontab$$
+    crontab /tmp/crontab$$
+    rm -f /tmp/crontab$$
+    echo "Crontab created."
+fi
 
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"

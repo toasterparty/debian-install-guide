@@ -14,10 +14,11 @@ exit
 You will be prompted to log back in afterwards.
 
 
-3. Download the setup script from this repository:
+3. Download and run the configuration script from this repository:
 
 ```sh
 sudo apt install -y wget
-wget https://toasterparty.github.io/debian-setup-guide/configure.sh
+wget -N https://toasterparty.github.io/debian-setup-guide/configure.sh
 chmod +x configure.sh
+./configure.sh
 ```
