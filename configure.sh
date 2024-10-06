@@ -71,13 +71,11 @@ while true; do
 
             # Process each line in sources.list
             sudo bash -c 'while read -r line; do
-                # Skip empty lines or lines that are comments
                 if [[ -z "$line" || "$line" =~ ^# ]]; then
                     echo "$line"
                     continue
                 fi
 
-                # Add "contrib", "non-free", "non-free-firmware" only if they aren\'t already present
                 new_line="$line"
                 
                 if ! [[ "$line" =~ contrib ]]; then
