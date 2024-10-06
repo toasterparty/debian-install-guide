@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-echo "Update system..."
+echo "Updating system..."
 sudo apt-get -qq update -y --allow-releaseinfo-change
 sudo apt-get -qq --fix-broken install
 sudo dpkg --configure -a

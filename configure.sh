@@ -62,11 +62,41 @@ while true; do
 
             # Add firmware to apt sources
             SOURCES_LIST="/etc/apt/sources.list"
+            BACKUP_FILE="/etc/apt/sources.list.bak"
             TAGS=("contrib" "non-free" "non-free-firmware")
 
-            for TAG in "${TAGS[@]}"; do
-                sudo sed -i "/main/ { / ${TAG}(\s|$)/! s/$/ $TAG/ }" $SOURCES_LIST
-            done
+            if [ ! -f "$BACKUP_FILE" ]; then
+                sudo cp $SOURCES_LIST $BACKUP_FILE
+            fi
+
+            # Process each line in sources.list
+            sudo bash -c 'while read -r line; do
+                # Skip empty lines or lines that are comments
+                if [[ -z "$line" || "$line" =~ ^# ]]; then
+                    echo "$line"
+                    continue
+                fi
+
+                # Add "contrib", "non-free", "non-free-firmware" only if they aren\'t already present
+                new_line="$line"
+                
+                if ! [[ "$line" =~ contrib ]]; then
+                    new_line="$new_line contrib"
+                fi
+
+                if ! [[ "$line" =~ non-free[^-] ]]; then
+                    new_line="$new_line non-free"
+                fi
+
+                if ! [[ "$line" =~ non-free-firmware ]]; then
+                    new_line="$new_line non-free-firmware"
+                fi
+
+                echo "$new_line"
+            done < /etc/apt/sources.list > /etc/apt/sources.list.tmp'
+
+            # Replace the original file with the modified one
+            sudo mv /etc/apt/sources.list.tmp /etc/apt/sources.list
 
             $SH/update.sh
             sudo apt-get install -m -y fwupd firmware-linux-nonfree
