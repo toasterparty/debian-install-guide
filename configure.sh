@@ -150,16 +150,89 @@ while true; do
             ;;
         8)
             # Configure git
+
+            SSH_DIR=$HOME/.ssh
+            SSH_CONFIG=$SSH_DIR/config
+            SSH_HOSTS=$SSH_DIR/known_hosts
+            PRIVKEY=$SSH_DIR/id_ed25519
+            PUBKEY=$PRIVKEY.pub
+
+            mkdir -p $HOME/git
+            mkdir -p $SSH_DIR
+            test -f $SSH_CONFIG || touch $SSH_CONFIG
+            test -f $SSH_HOSTS || touch $SSH_HOSTS
+
+            # Set global user/email config
+
+            GIT_USER=$(git config --global user.name)
+            GIT_EMAIL=$(git config --global user.email)
+
+            if [ -z "$GIT_USER" ]; then
+                echo "Enter your git username:"
+                read -p ">" USER
+                git config --global user.name "$USER"
+                GIT_USER=$(git config --global user.name)
+            fi
+
+            if [ -z "$GIT_EMAIL" ]; then
+                if [ -z "$EMAIL" ]; then
+                    echo "Enter your git email:"
+                    read -p ">" EMAIL
+                fi
+                git config --global user.email "$EMAIL"
+                GIT_EMAIL=$(git config --global user.email)
+            fi
+
+            # Generate SSH key if needed
+
+            if [ ! -f $PRIVKEY ]; then
+                echo "Enter your git email:"
+                read -p ">" EMAIL
+
+                ssh-keygen -t ed25519 -f $PRIVKEY -N "" -C "$EMAIL"
+                eval "$(ssh-agent -s)"
+                ssh-add $PRIVKEY
+            fi
+
+            # Update ssh config file
+
+            # Escape variables for use in sed
+            ESC_GIT_USER=$(echo "$GIT_USER" | sed 's/[]\/$*.^[]/\\&/g')
+            ESC_GIT_EMAIL=$(echo "$GIT_EMAIL" | sed 's/[]\/$*.^[]/\\&/g')
+            ESC_PRIVKEY=$(echo "$PRIVKEY" | sed 's/[]\/$*.^[]/\\&/g')
+
+            if ! grep -q "# $ESC_GIT_USER|$ESC_GIT_EMAIL" $SSH_CONFIG; then
+                ENTRY="# $GIT_USER|$GIT_EMAIL
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile $PRIVKEY"
+
+                # add github to known hosts
+                ssh-keygen -R github.com > /dev/null 2&>1
+                ssh-keyscan -H github.com >> $SSH_HOSTS
+                rm -f $SSH_HOSTS.old*
+
+                echo "$ENTRY" >> $SSH_CONFIG
+                echo "Entry added to $SSH_CONFIG."
+            fi
+
+            echo "Here is your SSH key. Please copy it and add it to your GitHub account (https://github.com/settings/keys) if you have not already:"
+            echo ""
+            cat $PUBKEY
+            echo ""
+
             ;;
         9)
             # Uninstall GUI
             sudo systemctl set-default multi-user.target
-            sudo systemctl stop gdm3
-            sudo systemctl disable gdm3
-            sudo apt-get remove -y --purge gnome-core
-            sudo apt-get remove -y --purge kde-plasma-desktop
-            sudo apt-get remove -y --purge xfce4
-            sudo apt-get remove -y --purge lxde
+            
+            if systemctl is-active --quiet gdm3; then
+                sudo systemctl stop gdm3
+                sudo systemctl disable gdm3
+            fi
+
+            sudo apt-get remove -qq -y --purge gnome-core kde-plasma-desktop xfce4 lxde
 
             echo ""
             echo "GUI Uninstalled - Reboot with "sudo reboot" to apply changes"
