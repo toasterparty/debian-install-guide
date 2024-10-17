@@ -11,7 +11,7 @@ fi
 JOB_NAME=$1
 COMMAND=$2
 FREQUENCY=$3
-LOG_DIR="$HOME/logs"
+LOG_DIR="$HOME/.logs"
 LOG_FILE="$LOG_DIR/$JOB_NAME.log"
 
 # Ensure crontab for current user

@@ -13,7 +13,6 @@ exit
 
 You will be prompted to log back in afterwards.
 
-
 3. Download and run the configuration script from this repository:
 
 ```sh
@@ -22,3 +21,5 @@ wget -N https://toasterparty.github.io/debian-setup-guide/configure.sh
 chmod +x configure.sh
 ./configure.sh
 ```
+
+When finished, feel free to `rm configure.sh`.

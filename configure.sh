@@ -122,17 +122,15 @@ while true; do
 
             # Setup SSH
 
-            sudo ufw allow ssh -y
+            sudo ufw allow ssh
             sudo systemctl enable ssh --now
 
             echo ""
-            echo "SSH server enabled and running. Please configure run `configure-ssh.bat` on the client PC for easy one-time SSH setup - otherwise you may use the following command to manually connect:"
+            echo "SSH server enabled and running. Please configure run configure-ssh.bat on the client PC for easy one-time SSH setup - otherwise you may use the following command to manually connect:"
             echo "    ssh $(logname)@$IP"
             echo ""
-            echo "You should also consider setting up a static DHCP rule for $MAC to $IP so this does not change. This can be done in your router's web portal."
-            echo ""
-            echo "If you would like to access this machine from an external network, it's recommended you create a port forward rule from a random external port to $IP:22."
-            echo ""
+            echo "You should also consider setting up a static DHCP rule for $MAC to $IP so this does not change. This can be done in your router's web portal. If you would like to access this machine from an external network, it's recommended you create a port forward rule from a random external port to $IP:22."
+            ;;
         7)
             # Install docker
             sudo install -m 0755 -d /etc/apt/keyrings
@@ -149,8 +147,10 @@ while true; do
             sudo apt-get install -m -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
             sudo docker run hello-world
             echo "Docker: OK"
+            ;;
         8)
             # Configure git
+            ;;
         9)
             # Uninstall GUI
             sudo systemctl set-default multi-user.target
@@ -163,6 +163,7 @@ while true; do
 
             echo ""
             echo "GUI Uninstalled - Reboot with "sudo reboot" to apply changes"
+            ;;
         10)
             echo "Exiting..."
             exit 0

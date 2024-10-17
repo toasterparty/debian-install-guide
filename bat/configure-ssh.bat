@@ -77,11 +77,16 @@ if !entry_exists! == true (
                 echo     User !user!
                 echo     AddKeysToAgent yes
                 echo     IdentityFile !privkey!
-                rem Skip the next 5 lines in the original file
-                set /a "skip_lines=5"
+                rem Dynamic skipping of the entry lines
+                set "in_entry=true"
             ) else (
-                if !skip_lines! gtr 0 (
-                    set /a "skip_lines-=1"
+                if "!in_entry!"=="true" (
+                    if "!line:~0,1!"==" " (
+                        rem continue skipping lines
+                    ) else (
+                        set "in_entry=false"
+                        echo !line!
+                    )
                 ) else (
                     echo !line!
                 )
@@ -92,6 +97,7 @@ if !entry_exists! == true (
     echo Entry updated successfully
 ) else (
     echo Adding entry to '!config_path!'...
+    echo. >> "!config_path!"
     >> "!config_path!" (
         echo !host_entry!
         echo     HostName !ip!
