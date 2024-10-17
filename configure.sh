@@ -19,18 +19,17 @@ done
 show_menu() {
     echo ""
     echo "Choose an option:"
+    echo "0) ALL OF THE BELOW"
     echo "1) Enable passwordless sudo"
     echo "2) Update packages"
     echo "3) Install common packages"
     echo "4) Update firmware"
     echo "5) Enable weekly system update"
-
-    # docker
-    # git
-    # ssh
-
-    echo "98) ALL OF THE ABOVE"
-    echo "99) Exit"
+    echo "6) Setup SSH"
+    echo "7) Install Docker"
+    echo "8) Configure git"
+    echo "9) Uninstall GUI"
+    echo "10) Exit"
 }
 
 while true; do
@@ -108,9 +107,8 @@ while true; do
             sudo fwupdmgr refresh --force
 
             # Check for available updates
-            sudo fwupdmgr get-updates
-            sudo fwupdmgr update
-
+            sudo fwupdmgr get-updates || :
+            sudo fwupdmgr update || :
             echo "Done checking for firmware updates. A reboot may or may not be nececssary"
             ;;
         5)
@@ -118,10 +116,54 @@ while true; do
             $HOME/sh/cron.sh "update" "$HOME/sh/update.sh" "0 3 * * 1"
             echo System updates will be installed every Monday at 3am
             ;;
-        99)
-            # Install common packages
-            ;;
-        99)
+        6)
+            IP=$(hostname -I | awk '{print $1}')
+            MAC=$(ip -br link | grep $(ip -br addr show | awk -v ip="$IP" '$0 ~ ip {print $1}') | awk '{print $3}')
+
+            # Setup SSH
+
+            sudo ufw allow ssh -y
+            sudo systemctl enable ssh --now
+
+            echo ""
+            echo "SSH server enabled and running. Please configure run `configure-ssh.bat` on the client PC for easy one-time SSH setup - otherwise you may use the following command to manually connect:"
+            echo "    ssh $(logname)@$IP"
+            echo ""
+            echo "You should also consider setting up a static DHCP rule for $MAC to $IP so this does not change. This can be done in your router's web portal."
+            echo ""
+            echo "If you would like to access this machine from an external network, it's recommended you create a port forward rule from a random external port to $IP:22."
+            echo ""
+        7)
+            # Install docker
+            sudo install -m 0755 -d /etc/apt/keyrings
+            sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+            sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+            echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+            $SH/update.sh
+
+            sudo apt-get install -m -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            sudo docker run hello-world
+            echo "Docker: OK"
+        8)
+            # Configure git
+        9)
+            # Uninstall GUI
+            sudo systemctl set-default multi-user.target
+            sudo systemctl stop gdm3
+            sudo systemctl disable gdm3
+            sudo apt-get remove -y --purge gnome-core
+            sudo apt-get remove -y --purge kde-plasma-desktop
+            sudo apt-get remove -y --purge xfce4
+            sudo apt-get remove -y --purge lxde
+
+            echo ""
+            echo "GUI Uninstalled - Reboot with "sudo reboot" to apply changes"
+        10)
             echo "Exiting..."
             exit 0
             ;;
@@ -130,60 +172,3 @@ while true; do
             ;;
     esac
 done
-
-# Install docker
-
-# if ! command -v docker &> /dev/null || ! sudo docker info &> /dev/null; then
-#     # Install Docker GPG key
-#     sudo install -m 0755 -d /etc/apt/keyrings
-#     curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --yes --dearmor -o /etc/apt/keyrings/docker.gpg
-
-#     # Add Docker repository
-#     echo \
-#       "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-#       $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-#       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-#     # Update apt and install Docker packages
-#     sudo apt-get update
-#     sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    
-#     # run a little test
-#     sudo docker run hello-world
-
-#     echo "Docker: OK"
-# else
-#     echo "Docker: OK"
-# fi
-
-# Configure git
-
-# Configure SSH
-# ./sh/install.sh openssh-server ufw
-# sudo ufw allow ssh -y
-# sudo systemctl enable ssh --now
-# - Generate an ed25519 key on the client machine if needed
-# - Install vscode Remove/SSH extension(s) if needed
-# - Edit vscode ssh config to include 
-# something like:
-# ```
-# # Server
-# Host odroid-h3p
-#     HostName 192.168.0.186
-#     User toaster
-#     AddKeysToAgent yes
-#     IdentityFile ~/.ssh/id_ed25519
-# ```
-# - Copy the contents of `.ssh/id_ed25519.pub` to the clipboard of the client machine
-# - Connect to server via SSH outside of vscode and edit `~/.ssh/authorized_keys` to include the above public key
-# - Run pallet command `Remote-SSH: Connect to Host…` and follow instructions for first time connection
-
-# Uninstall GUI
-# sudo systemctl set-default multi-user.target
-# sudo systemctl stop gdm3
-# sudo systemctl disable gdm3
-# sudo apt-get remove -y --purge gnome-core
-# sudo apt-get remove -y --purge kde-plasma-desktop
-# sudo apt-get remove -y --purge xfce4
-# sudo apt-get remove -y --purge lxde
-# echo Reboot with "sudo reboot" to apply changes

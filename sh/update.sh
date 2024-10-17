@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "Updating system..."
-sudo apt-get -qq update -y --allow-releaseinfo-change
+sudo apt-get -qq update -u -y --allow-releaseinfo-change
 sudo apt-get -qq --fix-broken install
 sudo dpkg --configure -a
 sudo apt-get -qq full-upgrade -y
