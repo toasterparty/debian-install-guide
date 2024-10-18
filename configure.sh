@@ -1,13 +1,38 @@
 #!/usr/bin/env bash
 set -e
-
 HOST="https://toasterparty.github.io/debian-setup-guide"
 SH="$HOME/sh"
 
 # Functions
 
+prompt_continue() {
+    echo ""
+    echo "Press any key to continue."
+    read -n 1 -s
+    echo ""
+}
+
+prompt_yes_no() {
+    local PROMPT=$1
+    local RESPONSE
+
+    echo "$PROMPT"
+    read -p "> " RESPONSE
+
+    RESPONSE=${RESPONSE:-Y}
+    RESPONSE=$(echo "$RESPONSE" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$RESPONSE" == "y" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 download_scripts() {
-    FILENAMES=("update.sh" "cron.sh")
+    local FILENAMES=("update.sh" "cron.sh")
+
+    echo "Fetching setup scripts..."
     mkdir -p $SH && cd $SH
     for FILENAME in "${FILENAMES[@]}"; do
         FILEPATH=$SH/$FILENAME
@@ -21,18 +46,31 @@ update () {
 }
 
 enable_passwordless_sudo() {
-    LINE='%sudo ALL=(ALL) NOPASSWD: ALL'
-    FILEPATH='/etc/sudoers'
-    sudo grep -xsqF "$LINE" "$FILEPATH" || echo "$LINE" | sudo tee -a "$FILEPATH"
-    echo "Passwordless sudo: OK"
+    local LINE='%sudo ALL=(ALL) NOPASSWD: ALL'
+    local FILEPATH='/etc/sudoers'
+
+    if sudo grep -xsqF "$LINE" "$FILEPATH"; then
+        echo "Passwordless sudo: OK"
+        return 0 # already passwordless
+    fi
+
+    echo ""
+    if prompt_yes_no "Passwordless sudo saves you from having to type your password every time you execute a command with sudo priveledges. The tradeoff is that root access becomes as secure as your user login method, which is fine in most cases. Would you like to enable passwordless sudo now [Y/n]?"; then
+        echo "$LINE" | sudo tee -a "$FILEPATH"
+        echo "Passwordless sudo: OK"
+    else
+        echo "Passwordless sudo: Skipped"
+    fi
 }
 
 install_packages() {
-    SYS_PKG="ufw ca-certificates gnupg"
-    UTIL_PKG="wget curl openssh-server"
-    DEV_PKG="git cmake ccache docker"
-    PYTHON_PKG="python3 python3-venv python3-setuptools python3-pip"
-    sudo apt-get install -m -y $SYS_PKG $UTIL_PKG $DEV_PKG $PYTHON_PKG
+    local SYS_PKG="ufw ca-certificates gnupg"
+    local UTIL_PKG="wget curl openssh-server"
+    local DEV_PKG="git cmake ccache docker"
+    local PYTHON_PKG="python3 python3-venv python3-setuptools python3-pip"
+    sudo apt-get install -qq -m -y $SYS_PKG $UTIL_PKG $DEV_PKG $PYTHON_PKG
+
+    echo ""
     echo "Common packages installation complete"
 }
 
@@ -49,16 +87,16 @@ install_docker() {
 
     update
 
-    sudo apt-get install -m -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo apt-get install -qq -m -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     sudo docker run hello-world
     echo "Docker: OK"
 }
 
 update_firmware() {
     # Add firmware to apt sources
-    SOURCES_LIST="/etc/apt/sources.list"
-    BACKUP_FILE="/etc/apt/sources.list.bak"
-    TAGS=("contrib" "non-free" "non-free-firmware")
+    local SOURCES_LIST="/etc/apt/sources.list"
+    local BACKUP_FILE="/etc/apt/sources.list.bak"
+    local TAGS=("contrib" "non-free" "non-free-firmware")
 
     if [ ! -f "$BACKUP_FILE" ]; then
         sudo cp $SOURCES_LIST $BACKUP_FILE
@@ -72,7 +110,7 @@ update_firmware() {
         fi
 
         new_line="$line"
-        
+
         if ! [[ "$line" =~ contrib ]]; then
             new_line="$new_line contrib"
         fi
@@ -91,8 +129,8 @@ update_firmware() {
     # Replace the original file with the modified one
     sudo mv /etc/apt/sources.list.tmp /etc/apt/sources.list
 
-    $SH/update.sh
-    sudo apt-get install -m -y fwupd firmware-linux-nonfree
+    update
+    sudo apt-get install -qq -m -y fwupd firmware-linux-nonfree
 
     # Reload fwupd service to ensure it's up-to-date
     sudo systemctl daemon-reload
@@ -109,7 +147,7 @@ update_firmware() {
 }
 
 update_cron_job() {
-    $HOME/sh/cron.sh "update" "$HOME/sh/update.sh" "0 3 * * 1"
+    $SH/cron.sh "update" "$SH/update.sh" "0 3 * * 1"
     echo System updates will be installed/applied every Monday at 3am
 }
 
@@ -121,18 +159,28 @@ configure_ssh() {
     sudo systemctl enable ssh --now
 
     echo ""
-    echo "SSH server enabled and running. Please configure run configure-ssh.bat on the client PC for easy one-time SSH setup - otherwise you may use the following command to manually connect:"
+    echo ""
+    echo "SSH server enabled and running. Please run $HOST/bat/configure-ssh.bat on the client PC for easy one-time SSH setup - otherwise you may use the following command to manually connect:"
     echo "    ssh $(logname)@$IP"
     echo ""
     echo "You should also consider setting up a static DHCP rule for $MAC to $IP so this does not change. This can be done in your router's web portal. If you would like to access this machine from an external network, it's recommended you create a port forward rule from a random external port to $IP:22."
+    echo ""
 }
 
 configure_git() {
-    SSH_DIR=$HOME/.ssh
-    SSH_CONFIG=$SSH_DIR/config
-    SSH_HOSTS=$SSH_DIR/known_hosts
-    PRIVKEY=$SSH_DIR/id_ed25519
-    PUBKEY=$PRIVKEY.pub
+    local SSH_DIR=$HOME/.ssh
+    local SSH_CONFIG=$SSH_DIR/config
+    local SSH_HOSTS=$SSH_DIR/known_hosts
+    local PRIVKEY=$SSH_DIR/id_ed25519
+    local PUBKEY=$PRIVKEY.pub
+    local GIT_USER=$(git config --global user.name)
+    local GIT_EMAIL=$(git config --global user.email)
+    local ESC_GIT_USER
+    local ESC_GIT_EMAIL
+    local ESC_PRIVKEY
+    local EMAIL
+    local USER
+    local ENTRY
 
     mkdir -p $HOME/git
     mkdir -p $SSH_DIR
@@ -141,12 +189,9 @@ configure_git() {
 
     # Set global user/email config
 
-    GIT_USER=$(git config --global user.name)
-    GIT_EMAIL=$(git config --global user.email)
-
     if [ -z "$GIT_USER" ]; then
         echo "Enter your git username:"
-        read -p ">" USER
+        read -p "> " USER
         git config --global user.name "$USER"
         GIT_USER=$(git config --global user.name)
     fi
@@ -154,22 +199,23 @@ configure_git() {
     if [ -z "$GIT_EMAIL" ]; then
         if [ -z "$EMAIL" ]; then
             echo "Enter your git email:"
-            read -p ">" EMAIL
+            read -p "> " EMAIL
         fi
         git config --global user.email "$EMAIL"
         GIT_EMAIL=$(git config --global user.email)
     fi
 
+    echo "git config: OK"
+
     # Generate SSH key if needed
 
     if [ ! -f $PRIVKEY ]; then
-        echo "Enter your git email:"
-        read -p ">" EMAIL
-
-        ssh-keygen -t ed25519 -f $PRIVKEY -N "" -C "$EMAIL"
+        ssh-keygen -t ed25519 -f $PRIVKEY -N "" -C "$GIT_EMAIL"
         eval "$(ssh-agent -s)"
         ssh-add $PRIVKEY
     fi
+
+    echo "git ssh key: OK"
 
     # Update ssh config file
 
@@ -186,7 +232,7 @@ User git
 IdentityFile $PRIVKEY"
 
         # add github to known hosts
-        ssh-keygen -R github.com > /dev/null 2&>1
+        ssh-keygen -R github.com > /dev/null 2&>1 || :
         ssh-keyscan -H github.com >> $SSH_HOSTS
         rm -f $SSH_HOSTS.old*
 
@@ -194,15 +240,16 @@ IdentityFile $PRIVKEY"
         echo "Entry added to $SSH_CONFIG."
     fi
 
+    echo ""
+    echo ""
     echo "Here is your SSH key. Please copy it and add it to your GitHub account (https://github.com/settings/keys) if you have not already:"
     echo ""
     cat $PUBKEY
-    echo ""
 }
 
 uninstall_gui() {
     sudo systemctl set-default multi-user.target
-    
+
     if systemctl is-active --quiet gdm3; then
         sudo systemctl stop gdm3
         sudo systemctl disable gdm3
