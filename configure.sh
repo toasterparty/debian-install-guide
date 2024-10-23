@@ -277,6 +277,18 @@ IdentityFile $PRIVKEY"
     fi
 }
 
+add_user_to_dialout() {
+    if groups $(logname) | grep -qw dialout; then
+        echo "dialout group: OK"
+    else
+        sudo usermod -a -G dialout $(logname)
+
+        echo ""
+        echo "dialout group: OK"
+        echo "System restart via 'sudo reboot' is required before you can use serial devices on this machine."
+    fi
+}
+
 uninstall_gui() {
     sudo systemctl set-default multi-user.target
 
@@ -309,8 +321,9 @@ show_menu() {
     echo "6) Configure SSH"
     echo "7) Configure git"
     echo "8) Enable weekly system update"
-    echo "9) Uninstall GUI"
-    echo "10) Exit"
+    echo "9) Add user to dialout group"
+    echo "10) Uninstall GUI"
+    echo "11) Exit"
 }
 
 while true; do
@@ -327,7 +340,9 @@ while true; do
             configure_ssh
             configure_git
             update_cron_job
+            add_user_to_dialout
             uninstall_gui
+            exit 0
             ;;
         1)
             enable_passwordless_sudo
