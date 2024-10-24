@@ -88,7 +88,19 @@ install_docker() {
     update
 
     sudo apt-get install -qq -m -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    
+    if groups $(logname) | grep -qw docker; then
+        echo "docker group: OK" 
+    else
+        echo "Adding user to docker group..."
+        sudo usermod -a -G docker $(logname)
+
+        echo "docker group: OK"
+        echo "System restart via 'sudo reboot' is required before you can use docker without sudo."
+    fi
+
     sudo docker run hello-world
+
     echo "Docker: OK"
 }
 
