@@ -381,6 +381,9 @@ while true; do
             update_cron_job
             ;;
         9)
+            add_user_to_dialout
+            ;;
+        10)
             uninstall_gui
             ;;
         10)
