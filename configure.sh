@@ -386,7 +386,7 @@ while true; do
         10)
             uninstall_gui
             ;;
-        10)
+        11)
             echo "Exiting..."
             exit 0
             ;;
